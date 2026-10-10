@@ -10,6 +10,9 @@ backend/dist/
 .env.local
 .env.*.local
 
+.env 
+
+
 # Logs
 *.log
 npm-debug.log*
