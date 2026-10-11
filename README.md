@@ -313,3 +313,6 @@ Security Improvements
 second we can have a cron job or TTL indexes that mark these links as expired.
 - Data that is sent back from backend can be mimimized according to functional requirement and payload size can be reduced (more efficiency)
 - Queries can be optimized and indexing can be applied for heavy read operations.
+
+
+## Note:- Sharing Secrets(.env) credentials  is breach of security ethics in engineering but i am still sharing it due to time constraints (can't host), also .env files doesn't have any any secret credentials which can cause resources abuse excpet mongouri (whose user is created with minimum access of write and read and limited to one specific database). 
