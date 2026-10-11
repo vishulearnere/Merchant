@@ -1,8 +1,36 @@
+#  Assessment ID: FS-02 
 # PayFlow - Merchant Payment Link
 
 PayFlow is a full-stack payment link management platform featuring a React (Vite) merchant dashboard, a Node.js/Express (TypeScript) REST API, and a MongoDB Atlas database. It supports instant payment link creation, simulated customer checkout flows, secured webhook callbacks, and bcrypt-hashed JWT authentication.
 
 ---
+## DEmo Video 
+
+https://github.com/user-attachments/assets/c6a10016-c822-4c13-a86d-cecd760ab78a
+
+
+## Assumptions made 
+
+- Every Merchant will be unique (unique constraint on Email)
+- a merchant can create many payment links and can access only their created links (Authorization)
+(one merchant ->  many payment links )
+- any customer can use those links to make payment (public APIS)
+- a payment link will have many payment intent (attempts)
+(one payment link -> many payment attempts)
+- Payment link will have status as ACTIVE -> PAID | EXPIRED
+- A payment intent will have status PENDING -> SUCCESS | FAILED
+- an EXPIRED or PAID link can't be processed  for any further payment intent.
+- For a single Payment Link 
+  - A payment intent is created with default PENDING status, 
+  - If it's status is PENDING then a new payment intent can't be created again. 
+  - If it's status is SUCCESS then Link is marked as PAID and a new payment intent can't be created again for that particular link.
+  - If it's status is FAILED then a new payment intent can be created again.
+- Link expiration time is 2 days.
+- JWT Token expiration is 7 days.
+- SUCCESS is final state of payment intent.
+
+
+
 
 ## Questions 1. 
 1. The provider sends FAILED after SUCCESS for the same payment. What does your system do, and why?
@@ -38,6 +66,27 @@ To prevent a race condition if two customers click "Pay" simultaneously, I would
 the database inherently acts as a lock.
  The first request instantly changes the state, causing the exact simultaneous second request to fail the query condition, safely blocking the duplicate attempt. 
 
+
+
+
+# Webhook implementation
+  webhook link can be initiated providing shared secret in header
+  - ### with  curl 
+  ```
+  curl -X POST http://localhost:3000/webhooks/provider \
+  -H "Content-Type: application/json" \
+  -H "x-webhook-secret: payflow_secret_key_123" \
+  -d '{
+    "eventId": "evt_001",
+    "paymentId": "pay_123",
+    "status": "SUCCESS"
+  }'
+  ```
+
+  - ### Postman 
+  
+![Postman ](screenshots/postman_header.png)
+![Postman ](screenshots/postman_body.png)
 ## 🏗️ System Architecture & How It Works
 
 The platform uses a decoupled client-server architecture:
@@ -58,12 +107,10 @@ The platform uses a decoupled client-server architecture:
 ```
 
 1. **Frontend (Port 3000)**: Single-page React application built with TypeScript, Tailwind CSS, and Lucide icons. Runs locally in the user's browser, sending requests to `http://localhost:5000/v1`.
-2. **Backend (Port 5000)**: Express & TypeScript REST API mounted on `/v1`. Manages authentication, hashes passwords via `bcrypt`, validates JWT tokens, handles idempotency, validates webhook secrets, and updates payment statuses.
+2. **Backend (Port 5000)**: Express & TypeScript REST API mounted on `/v1`. Manages authentication, hashes passwords via `bcrypt`, validates JWT tokens, validates webhook secrets, and updates payment statuses.
 3. **Database (MongoDB Atlas)**: Stores merchants, payment links, and payment transaction records with optimized indexes.
 
 ---
-
-## Video:
 
 
 
@@ -144,6 +191,11 @@ cd ..
 ### Step 3: Configure Environment Variables
 
 Create or verify the `.env` file inside the `backend/` directory:
+
+```
+cd backend 
+touch .env 
+```
 
 **`backend/.env`**:
 ```env
@@ -241,7 +293,23 @@ All backend routes are prefixed with `/v1`:
 - **Auto-Refresh**: Merchant dashboard automatically polls and refreshes link statuses in real time.
 Auto-refresh of link status on the merchant page.
 
+### Additional/Optional  Tasks Done 
+- [x] DONE : Merchant login with JWT, so only the merchant can create and see their links.
+- [x] Link expiry.
+- [x] Verify a shared secret in a webhook header.
+- [x] Auto-refresh of link status on the merchant page.
 
-
-
-## Note:- Sharing Secrets(.env)  file is breach of security ethics in engineering but i am still sharing it due to time constraints (can't host), also .env files doesn't have any any secret credentials excpet mongouri (whose user is created with minimum access of write and read and limited to one specific database). 
+## potential improvements 
+Security Improvements
+- JWT Authentication with Refresh Tokens (httpOnly, Cookies)
+- On logout flush the tokens and invalidate token.
+- retries and better error handling
+- logging and traces 
+-  Frontend is running on local server, it can be built and then hosted on object store 
+- improving code quality adding test cases
+- creating documentation on swagger 
+- Deploying application  on the  cloud
+- Currently when user tries to access a payment link we check if it's date and time and if it is out of date we mark it as EXPIRED, two things can be improved here, time can be stored in epoch time for  Performance, Timezone Independence, 
+second we can have a cron job or TTL indexes that mark these links as expired.
+- Data that is sent back from backend can be mimimized according to functional requirement and payload size can be reduced (more efficiency)
+- Queries can be optimized and indexing can be applied for heavy read operations.
